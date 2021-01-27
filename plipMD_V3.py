@@ -8,6 +8,8 @@ import progressbar
 
 import os
 import sys
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def plipmd(topol=None,traj=None):
@@ -16,21 +18,23 @@ def plipmd(topol=None,traj=None):
 	
 	u = md.Universe(topol,traj)
 
-	ligand_name=input ('Type the Resname of your Ligand (must be 3 letter code):')
+	ligand_name=input ('\n\n1) Type the ResName of your Ligand (must be 3 letter code -example: LIG -):\n>')
+
+	sol_name=input ('\n2) Type the ResName of your Water (must be 3-4 letter code -example: WAT or SOL or TIP3P -):\n>')
 
 	for res in u.residues:
 		if res.resname==ligand_name:
 			res.resname='LIG'
-		if res.resname=='TIP3' or res.resname=='SOL':
+		if res.resname==sol_name:
 			res.resname='HOH'
-		if res.resname=='HSD':
+		if 'HI' in res.resname:
 			res.resname='HIS'
+		if 'CY' in res.resname:
+			res.resname='CYS'
 	for atom in u.atoms:
 		if atom.name=='OH2':
 			atom.name='OW'
 
-	
-	
 	System=u.select_atoms('protein or (resname LIG or resname HOH)')
 	System=System.select_atoms('protein or resname LIG or (around 7 resname LIG)',updating=True)
 
@@ -42,18 +46,17 @@ def plipmd(topol=None,traj=None):
 		plip_job = PDBComplex()
 		plip_job.load_pdb(name) 
 		plip_job.analyze()
-		print (plip_job)
-		ligand=input('Type the name of the ligand in trajectory to analyze:')
+		print ('\nINFO:',plip_job,'\n')
+		ligand=input('3) Type the name of the ligand in trajectory to analyze (- example: LIG:S:152 -):\n>')
 	os.remove(name)
 
-	print ('-----  -----  -----  -----  -----  -----  -----  -----  -----  -----  -----  -----')
 	table=pd.DataFrame()
 	index=0
-	print ('Your trajectory lenght is:{} steps'.format(range(len(u.trajectory))))
-	start=int(input('Type the starting STEP to analyze:'))
-	finish=int(input('Type the ending STEP to analyze:'))
+	print ('\nINFO: Your trajectory lenght is:{} steps\n'.format(range(len(u.trajectory))))
+	start=int(input('4) Type the starting STEP to analyze:\n>'))
+	finish=int(input('\n5) Type the ending STEP to analyze:\n>'))
 	bar=progressbar.ProgressBar(max_value=finish)
-	print ('-----  -----  -----  STARTING THE ANALYSIS  -----  -----  -----')
+	print ('\n\n-----  -----  -----  RUNNING THE ANALYSIS  -----  -----  -----\n\n')
 	for i in range(start,finish):
 		name='frame_tmp.pdb'
 		PDB= md.Writer(name, multiframe=False)
@@ -143,13 +146,13 @@ def plipmd(topol=None,traj=None):
 					table.loc[index,'Location']=interaction.location
 				
 				index=index+1    
-		bar.update(i)
+		bar.update(i+1)
 		os.remove(name)
 		
-	print ('-----  -----  -----  SAVING THE RESULTS, PLEASE WAIT  -----  -----  -----')	
+	print ('\n\n-----  -----  -----  SAVING THE RESULTS, PLEASE WAIT  -----  -----  -----\n\n')	
 	table.set_index(['Frame','Time'], inplace=True)
 	table.sort_index(inplace=True)
 	table.to_excel('Interactions_Table.xlsx')
-	print ('-----  -----  -----  ALL DONE, THANKS FOR USING THIS SCRIPT  -----  -----  -----')
+	print ('\n\n***** ***** ***** ALL DONE, DATA SAVED ON: Interactions_Table.xlsx ***** ***** *****\n\n')	 
 if __name__ == "__main__":
 	plipmd(sys.argv[1],sys.argv[2])
